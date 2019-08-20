@@ -1,0 +1,116 @@
+- hosts: localstack
+  become: true
+  tasks:
+  - name: install centos ius releases 
+    command:  yum install -y https://centos7.iuscommunity.org/ius-release.rpm
+    args:
+      warn: false   
+    ignore_errors: yes
+    
+  - name: Clean all Cache
+    command: yum clean all
+    args:
+      warn: false
+
+  - name: Create cache
+    command: yum makecache
+    args:
+      warn: false
+
+  - name: Install Dependencies
+    yum:
+      update_cache: yes
+      name: "{{ item }}"
+      state: latest
+    loop:
+      - java-1.8.0-openjdk
+      - java-1.8.0-openjdk-devel.x86_64
+      - epel-release
+      - python-pip
+      - python-devel
+      - gcc 
+      - make
+      - npm 
+      - python36u
+      - python36u-libs 
+      - python36u-devel
+      - python36u-pip
+
+  - name: Download Maven 3.6.1
+    get_url: url=http://www-us.apache.org/dist/maven/maven-3/3.6.1/binaries/apache-maven-3.6.1-bin.tar.gz dest=/home/apache-maven-3.6.1-bin.tar.gz
+  - name: Extract Maven
+    command: tar xvf /home/apache-maven-3.6.1-bin.tar.gz -C /home/
+    args:
+      warn: false
+  - name: Move
+    command: mv  /home/apache-maven-3.6.1 /opt/maven
+    ignore_errors: yes
+
+  - name: Update Profile
+    copy: content="export M2_HOME=/opt/maven \n" dest=/etc/profile.d/maven.sh
+  
+ 
+ 
+  - name: add profile path maven
+    lineinfile:
+      path: /etc/profile.d/maven.sh
+      line: 'export PATH=${M2_HOME}/bin:${PATH}'
+  
+ 
+  - name: Source profile maven
+    shell: source /etc/profile.d/maven.sh
+    args:
+      warn: false
+  - name: create javaexp.sh
+    command: touch /etc/profile.d/javaexp.sh
+
+
+  - name: Add Profile path for java
+    lineinfile:
+      dest: "{{ item.dest }}"
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      backrefs: yes
+    with_items:
+      - {dest: '/etc/profile.d/javaexp.sh', regexp: 'Config path for java1', line: 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64/'}
+      - {dest: '/etc/profile.d/javaexp.sh', regexp: 'Config path for java2', line: 'export PATH=$PATH:/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64/bin'}
+
+
+  
+
+  - name: Source profile java
+    shell: source /etc/profile.d/javaexp.sh
+    args:
+      warn: false
+
+  - name: upgrade pip 
+    command:  python3.6 -m pip install --upgrade pip
+    args:
+      warn: false    
+
+
+
+  - name: pip install localstack
+    command:  python3.6 -m pip install localstack
+    args:
+      warn: false
+
+
+
+  
+
+
+  - name: Open Port  - localstack
+    command: firewall-cmd --add-port=4500-46000/tcp --permanent
+    args:
+      warn: false
+
+  - name: Open Port 8080 - http api
+    command: firewall-cmd --add-port=8080/tcp --permanent
+    args:
+      warn: false
+
+  - name: Reload Firewall
+    command: firewall-cmd --reload
+    args:
+      warn: false
