@@ -1,6 +1,6 @@
 ## Crear VM con LocalStack:
 
-## IP address: 10.252.7.169
+IP address: 10.252.7.169
 
 
 ## Instalacion de Localstack  script de Ansible : 
